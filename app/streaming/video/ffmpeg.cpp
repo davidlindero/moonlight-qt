@@ -4,6 +4,7 @@
 #include "streaming/session.h"
 
 #include <h264_stream.h>
+#include <qfile.h>
 
 #include "ffmpeg-renderers/sdlvid.h"
 
@@ -228,6 +229,8 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {
+    videoFile.open("output", std::ios::out | std::ios::binary);
+
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);
     SDL_zero(m_GlobalVideoStats);
@@ -1317,6 +1320,8 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     }
 
     m_ActiveWndVideoStats.totalReassemblyTime += du->enqueueTimeMs - du->receiveTimeMs;
+
+    videoFile.write((const char *)m_Pkt->data, m_Pkt->size);
 
     err = avcodec_send_packet(m_VideoDecoderCtx, m_Pkt);
     if (err < 0) {

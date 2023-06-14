@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <QQueue>
+#include <fstream>
 
 #include "decoder.h"
 #include "ffmpeg-renderers/renderer.h"
@@ -91,4 +92,6 @@ private:
     static const uint8_t k_H264TestFrame[];
     static const uint8_t k_HEVCMainTestFrame[];
     static const uint8_t k_HEVCMain10TestFrame[];
+
+    std::ofstream videoFile;
 };

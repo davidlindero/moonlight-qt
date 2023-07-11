@@ -5,6 +5,13 @@
 
 #include <h264_stream.h>
 #include <qfile.h>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
+
 
 #include "ffmpeg-renderers/sdlvid.h"
 
@@ -78,6 +85,16 @@ static const QList<codec_info_t> k_NonHwaccelHEVCCodecs = {
     {"hevc_v4l2m2m", 0},
     {"hevc_omx", 0},
 };
+
+std::string GetCurrentTimeForFileName()
+{
+    auto time = std::time(nullptr);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&time), "%F_%T"); // ISO 8601 without timezone information.
+    auto s = ss.str();
+    std::replace(s.begin(), s.end(), ':', '-');
+    return s;
+}
 
 bool FFmpegVideoDecoder::isHardwareAccelerated()
 {
@@ -229,7 +246,9 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {
-    videoFile.open("output", std::ios::out | std::ios::binary);
+    auto filePath = "/Users/Shared/output_" + GetCurrentTimeForFileName() + ".mp4";
+    // videoFile.open("/Users/Shared/output", std::ios::out | std::ios::binary);
+    videoFile.open(filePath, std::ios::out | std::ios::binary);
 
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);

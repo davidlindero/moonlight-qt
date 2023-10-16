@@ -48,6 +48,14 @@
 #include "ffmpeg-renderers/cuda.h"
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+const std::string outputVideoBase = "C:\\Users\\Public\\Documents\\outputvideo_";
+#elif defined(__MACH__)
+const std::string outputVideoBase = "/Users/Shared/outputvideo_";
+#else
+const std::string outputVideoBase = "/tmp/outputvideo_";
+#endif
+
 // This is gross but it allows us to use sizeof()
 #include "ffmpeg_videosamples.cpp"
 
@@ -246,7 +254,19 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {
-    auto filePath = "/Users/Shared/output_" + GetCurrentTimeForFileName() + ".mp4";
+    // auto outputFileBase = "./";
+    // #ifdef Q_OS_WIN32
+    //     outputFileBase = "";
+    // #endif
+    // #ifdef Q_OS_DARWIN
+    //     outputFileBase = "/Users/Shared/outputvideo_";
+    // #endif
+    // #ifdef Q_OS_UNIX
+    //     outputFileBase = "/tmp/outputvideo_";
+    // #endif
+
+    // auto filePath = "/Users/Shared/outputvideo_" + GetCurrentTimeForFileName() + ".mp4";
+    auto filePath = outputVideoBase + GetCurrentTimeForFileName() + ".mp4";
     // videoFile.open("/Users/Shared/output", std::ios::out | std::ios::binary);
     videoFile.open(filePath, std::ios::out | std::ios::binary);
 

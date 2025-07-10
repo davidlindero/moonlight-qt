@@ -3,10 +3,23 @@
 #include "streaming/session.h"
 
 #include <h264_stream.h>
+#include <qfile.h>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
 
 extern "C" {
 #include <libavutil/mastering_display_metadata.h>
 #include <libavutil/pixdesc.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/timestamp.h>
+#include <libswscale/swscale.h>
 }
 
 #include "ffmpeg-renderers/sdlvid.h"
@@ -47,6 +60,14 @@ extern "C" {
 
 #ifdef HAVE_LIBPLACEBO_VULKAN
 #include "ffmpeg-renderers/plvk.h"
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+const std::string outputVideoBase = "C:\\Users\\Public\\Documents\\outputvideo_";
+#elif defined(__MACH__)
+const std::string outputVideoBase = "/Users/Shared/outputvideo_";
+#else
+const std::string outputVideoBase = "/tmp/moonlighttesting/outputvideo_";
 #endif
 
 // This is gross but it allows us to use sizeof()
@@ -236,6 +257,15 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {
+
+    auto filePath2 = outputVideoBase + GetCurrentTimeForFileName() + ".mp4";
+    videoFile.open(filePath2, std::ios::out | std::ios::binary);
+
+    m_FormatCtx = nullptr;
+    m_VideoStream = nullptr;
+
+    firstFrameWritten = false;
+    
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);
     SDL_zero(m_GlobalVideoStats);
@@ -248,6 +278,10 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
 
 FFmpegVideoDecoder::~FFmpegVideoDecoder()
 {
+    if (firstFrameWritten) {
+        av_write_trailer(m_FormatCtx);
+        avformat_free_context(m_FormatCtx);
+    }
     reset();
 
     // Set log level back to default.
@@ -1894,6 +1928,25 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
     m_ActiveWndVideoStats.totalReassemblyTime += du->enqueueTimeMs - du->receiveTimeMs;
 
+    if (!firstFrameWritten){
+        firstFrameWritten = setupVideoFile();
+    }
+
+    videoFile.write((const char *)m_Pkt->data, m_Pkt->size);
+    
+    AVPacket pkt;
+    av_init_packet(&pkt);
+    pkt.data = m_Pkt->data;
+    pkt.size = m_Pkt->size;
+    
+    // Convert presentationTimeMs (milliseconds) to stream time base
+    int64_t pts = av_rescale_q(du->presentationTimeMs, AVRational{1, 1000}, m_VideoStream->time_base);
+    pkt.pts = pts;
+    // pkt.dts = pts; // for simple cases
+    pkt.stream_index = m_VideoStream->index;
+
+    int ret = av_interleaved_write_frame(m_FormatCtx, &pkt);
+
     err = avcodec_send_packet(m_VideoDecoderCtx, m_Pkt);
     if (err < 0) {
         char errorstring[512];
@@ -1932,3 +1985,56 @@ void FFmpegVideoDecoder::renderFrameOnMainThread()
     m_Pacer->renderOnMainThread();
 }
 
+
+
+bool FFmpegVideoDecoder::setupVideoFile()
+{
+    std::string filePath = outputVideoBase + "new" + GetCurrentTimeForFileName() + ".mp4";
+
+    int ret = avformat_alloc_output_context2(&m_FormatCtx, nullptr, nullptr, filePath.c_str());
+    if (ret < 0 || !m_FormatCtx) {
+        // handle error
+        return false;
+    }
+
+    m_VideoStream = avformat_new_stream(m_FormatCtx, nullptr);
+    if (!m_VideoStream) {
+        // handle error
+        avformat_free_context(m_FormatCtx);
+        m_FormatCtx = nullptr;
+        return false;
+    }
+
+    ret = avcodec_parameters_from_context(m_VideoStream->codecpar, m_VideoDecoderCtx);
+    if (ret < 0) {
+        // handle error
+        avformat_free_context(m_FormatCtx);
+        m_FormatCtx = nullptr;
+        return false;
+    }
+
+    m_VideoStream->time_base = m_VideoDecoderCtx->time_base;
+
+    if (!(m_FormatCtx->oformat->flags & AVFMT_NOFILE)) {
+        ret = avio_open(&m_FormatCtx->pb, filePath.c_str(), AVIO_FLAG_WRITE);
+        if (ret < 0) {
+            // handle error
+            avformat_free_context(m_FormatCtx);
+            m_FormatCtx = nullptr;
+            return false;
+        }
+    }
+
+    ret = avformat_write_header(m_FormatCtx, nullptr);
+    if (ret < 0) {
+        // handle error
+        if (!(m_FormatCtx->oformat->flags & AVFMT_NOFILE)) {
+            avio_closep(&m_FormatCtx->pb);
+        }
+        avformat_free_context(m_FormatCtx);
+        m_FormatCtx = nullptr;
+        return false;
+    }
+
+    return true;
+}

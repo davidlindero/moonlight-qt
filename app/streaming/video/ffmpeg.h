@@ -3,6 +3,7 @@
 #include <functional>
 #include <QQueue>
 #include <set>
+#include <fstream>
 
 #include "decoder.h"
 #include "ffmpeg-renderers/renderer.h"
@@ -10,6 +11,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h> 
 }
 
 class FFmpegVideoDecoder : public IVideoDecoder {
@@ -129,4 +131,10 @@ private:
     static const uint8_t k_AV1High8_444TestFrame[];
     static const uint8_t k_AV1High10_444TestFrame[];
 
+    std::ofstream videoFile;
+    AVFormatContext* m_FormatCtx;
+    AVStream* m_VideoStream;
+
+    std::string* filePath;
+    bool firstFrameWritten;
 };

@@ -102,6 +102,18 @@ static const QMap<QString, int> k_NonHwaccelCodecInfo = {
     // AV1
 };
 
+
+std::string GetCurrentTimeForFileName()
+{
+    auto time = std::time(nullptr);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&time), "%F_%T"); // ISO 8601 without timezone information.
+    auto s = ss.str();
+    std::replace(s.begin(), s.end(), ':', '-');
+    return s;
+}
+
+
 bool FFmpegVideoDecoder::isHardwareAccelerated()
 {
     return m_HwDecodeCfg != nullptr ||

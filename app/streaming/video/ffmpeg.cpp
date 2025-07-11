@@ -268,16 +268,7 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_NeedsSpsFixup(false),
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
-{
-
-    auto filePath2 = outputVideoBase + GetCurrentTimeForFileName() + ".mp4";
-    videoFile.open(filePath2, std::ios::out | std::ios::binary);
-
-    m_FormatCtx = nullptr;
-    m_VideoStream = nullptr;
-
-    firstFrameWritten = false;
-    
+{    
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);
     SDL_zero(m_GlobalVideoStats);
@@ -1941,6 +1932,13 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     m_ActiveWndVideoStats.totalReassemblyTime += du->enqueueTimeMs - du->receiveTimeMs;
 
     if (!firstFrameWritten){
+        auto filePath2 = outputVideoBase + GetCurrentTimeForFileName() + ".mp4";
+        videoFile.open(filePath2, std::ios::out | std::ios::binary);
+    
+        m_FormatCtx = nullptr;
+        m_VideoStream = nullptr;
+    
+        firstFrameWritten = false;
         firstFrameWritten = setupVideoFile();
     }
 

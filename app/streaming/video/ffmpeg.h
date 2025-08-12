@@ -132,7 +132,7 @@ private:
     static const uint8_t k_AV1High8_444TestFrame[];
     static const uint8_t k_AV1High10_444TestFrame[];
 
-    std::ofstream videoFile;
+    // std::ofstream videoFile;
     AVFormatContext* m_FormatCtx;
     AVStream* m_VideoStream;
 

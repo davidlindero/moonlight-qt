@@ -1932,17 +1932,10 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     m_ActiveWndVideoStats.totalReassemblyTime += du->enqueueTimeMs - du->receiveTimeMs;
 
     if (!firstFrameWritten){
-        auto filePath2 = outputVideoBase + GetCurrentTimeForFileName() + ".mp4";
-        videoFile.open(filePath2, std::ios::out | std::ios::binary);
-    
-        m_FormatCtx = nullptr;
-        m_VideoStream = nullptr;
-    
-        firstFrameWritten = false;
+
         firstFrameWritten = setupVideoFile();
     }
 
-    videoFile.write((const char *)m_Pkt->data, m_Pkt->size);
     
     AVPacket pkt;
     av_init_packet(&pkt);

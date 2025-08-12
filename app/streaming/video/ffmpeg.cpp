@@ -269,6 +269,11 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
       m_TestOnly(testOnly),
       m_DecoderThread(nullptr)
 {    
+    m_FormatCtx = nullptr;
+    m_VideoStream = nullptr;
+
+    firstFrameWritten = false;
+    
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);
     SDL_zero(m_GlobalVideoStats);

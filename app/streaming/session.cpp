@@ -197,9 +197,7 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
     switch (connectionStatus)
     {
     case CONN_STATUS_POOR:
-        s_ActiveSession->m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate,
-                                                            s_ActiveSession->m_StreamConfig.bitrate > 5000 ?
-                                                                "Slow connection to PC\nReduce your bitrate" : "Poor connection to PC");
+        //Removed error overlay for slow bitstream
         s_ActiveSession->m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, true);
         break;
     case CONN_STATUS_OKAY:

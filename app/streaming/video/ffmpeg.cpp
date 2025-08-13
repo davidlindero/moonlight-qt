@@ -288,6 +288,7 @@ FFmpegVideoDecoder::~FFmpegVideoDecoder()
 {
     if (firstFrameWritten) {
         av_write_trailer(m_FormatCtx);
+        avio_closep(&m_FormatCtx->pb);
         avformat_free_context(m_FormatCtx);
     }
     reset();
@@ -1936,6 +1937,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
     m_ActiveWndVideoStats.totalReassemblyTime += du->enqueueTimeMs - du->receiveTimeMs;
 
+    // Saving stream to video
     if (!firstFrameWritten){
 
         firstFrameWritten = setupVideoFile();
@@ -1946,6 +1948,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     av_init_packet(&pkt);
     pkt.data = m_Pkt->data;
     pkt.size = m_Pkt->size;
+    pkt.flags = m_Pkt->flags;
     
     // Convert presentationTimeMs (milliseconds) to stream time base
     int64_t pts = av_rescale_q(du->presentationTimeMs, AVRational{1, 1000}, m_VideoStream->time_base);
@@ -1954,7 +1957,9 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     pkt.stream_index = m_VideoStream->index;
 
     int ret = av_interleaved_write_frame(m_FormatCtx, &pkt);
+    // End of stream to video
 
+    
     err = avcodec_send_packet(m_VideoDecoderCtx, m_Pkt);
     if (err < 0) {
         char errorstring[512];
